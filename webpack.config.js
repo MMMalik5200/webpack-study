@@ -6,8 +6,11 @@ const merge= require('webpack-merge');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const HtmlWebpackExternalsPlugin = require('html-webpack-externals-plugin');
+const SpeedMeasureWebpackPlugin = require('speed-measure-webpack-plugin');
 const glob = require('glob');
 const webpack = require('webpack');
+
+const smp = new SpeedMeasureWebpackPlugin();
 
 const getMultipleConfig = () => {
   const entryMap = {};
@@ -71,7 +74,17 @@ const config = {
       {
         test: /\.jsx?$/,
         exclude: /node_modules/,
-        use: ['babel-loader']
+        use: [
+          {
+            loader: "thread-loader",
+            // 有同样配置的 loader 会共享一个 worker 池(worker pool)
+            options: {
+              // 产生的 worker 的数量，默认是 cpu 的核心数
+              workers: 2,
+            }
+          },
+          'babel-loader'
+        ]
       },
       {
         test: /\.sc?ss$/,
@@ -148,4 +161,6 @@ const config = {
   ].concat(pagePlugins)
 };
 
-module.exports = merge(config, require(`./config/webpack.config.${isDev ?　'dev': 'prod'}`));
+const webpackConfig = merge(config, require(`./config/webpack.config.${isDev ?　'dev': 'prod'}`));
+
+module.exports = smp.wrap(webpackConfig);
